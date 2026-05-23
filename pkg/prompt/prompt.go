@@ -38,7 +38,6 @@ import (
 	rtasks "github.com/goharbor/harbor-cli/pkg/views/replication/task/select"
 
 	repoView "github.com/goharbor/harbor-cli/pkg/views/repository/select"
-	retview "github.com/goharbor/harbor-cli/pkg/views/retention/select"
 	robotView "github.com/goharbor/harbor-cli/pkg/views/robot/select"
 	sview "github.com/goharbor/harbor-cli/pkg/views/scanner/select"
 	uview "github.com/goharbor/harbor-cli/pkg/views/user/select"
@@ -306,7 +305,7 @@ func GetQuotaIDFromUser() int64 {
 	QuotaID := make(chan int64)
 
 	go func() {
-		response, err := api.ListQuota(*&api.ListQuotaFlags{})
+		response, err := api.ListQuota(api.ListQuotaFlags{})
 		if err != nil {
 			log.Errorf("failed to list quota: %v", err)
 		}
@@ -382,78 +381,36 @@ func GetRobotIDFromUser(projectID int64) (int64, error) {
 }
 
 func GetReplicationPolicyFromUser() (int64, error) {
-	replicationPolicyID := make(chan int64)
-	errChan := make(chan error, 1)
-
-	go func() {
-		response, err := api.ListReplicationPolicies()
-		if err != nil {
-			errChan <- err
-			return
-		}
-		if len(response.Payload) == 0 {
-			errChan <- fmt.Errorf("no replication policies found")
-			return
-		}
-		rpolicies.ReplicationPoliciesList(response.Payload, replicationPolicyID)
-	}()
-
-	select {
-	case id := <-replicationPolicyID:
-		return id, nil
-	case err := <-errChan:
+	response, err := api.ListReplicationPolicies()
+	if err != nil {
 		return 0, err
 	}
+	if len(response.Payload) == 0 {
+		return 0, fmt.Errorf("no replication policies found")
+	}
+	return rpolicies.ReplicationPoliciesList(response.Payload)
 }
 
 func GetReplicationExecutionIDFromUser(rpolicyID int64) (int64, error) {
-	executionID := make(chan int64)
-	errChan := make(chan error, 1)
-
-	go func() {
-		response, err := api.ListReplicationExecutions(rpolicyID)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		if len(response.Payload) == 0 {
-			errChan <- fmt.Errorf("no replication executions found")
-			return
-		}
-		rexecutions.ReplicationExecutionList(response.Payload, executionID)
-	}()
-
-	select {
-	case id := <-executionID:
-		return id, nil
-	case err := <-errChan:
+	response, err := api.ListReplicationExecutions(rpolicyID)
+	if err != nil {
 		return 0, err
 	}
+	if len(response.Payload) == 0 {
+		return 0, fmt.Errorf("no replication executions found")
+	}
+	return rexecutions.ReplicationExecutionList(response.Payload)
 }
 
 func GetReplicationTaskIDFromUser(execID int64) (int64, error) {
-	executionID := make(chan int64)
-	errChan := make(chan error, 1)
-
-	go func() {
-		response, err := api.ListReplicationTasks(execID)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		if len(response.Payload) == 0 {
-			errChan <- fmt.Errorf("no replication tasks found")
-			return
-		}
-		rtasks.ReplicationTasksList(response.Payload, executionID)
-	}()
-
-	select {
-	case id := <-executionID:
-		return id, nil
-	case err := <-errChan:
+	response, err := api.ListReplicationTasks(execID)
+	if err != nil {
 		return 0, err
 	}
+	if len(response.Payload) == 0 {
+		return 0, fmt.Errorf("no replication tasks found")
+	}
+	return rtasks.ReplicationTasksList(response.Payload)
 }
 
 // Get GetMemberIDFromUser choosing from list of members
@@ -486,11 +443,3 @@ func GetRoleIDFromUser() int64 {
 	return <-roleID
 }
 
-func GetRetentionTagRule(retentionID string) int64 {
-	retentionIndex := make(chan int64)
-	go func() {
-		response, _ := api.ListRetention(retentionID)
-		retview.RetentionList(response.Payload.Rules, retentionIndex)
-	}()
-	return <-retentionIndex
-}
