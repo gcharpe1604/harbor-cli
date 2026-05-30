@@ -25,7 +25,7 @@ import (
 
 var ErrUserAborted = errors.New("user aborted selection")
 
-func ReplicationPoliciesList(policies []*models.ReplicationPolicy, choice chan<- int64, errChan chan<- error) {
+func ReplicationPoliciesList(policies []*models.ReplicationPolicy) (int64, error) {
 	policyNameIDsMap := make(map[string]int64, len(policies))
 	for _, p := range policies {
 		policyNameIDsMap[p.Name] = p.ID
@@ -40,18 +40,18 @@ func ReplicationPoliciesList(policies []*models.ReplicationPolicy, choice chan<-
 
 	p, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
 	if err != nil {
-		errChan <- fmt.Errorf("error running selection program: %w", err)
-		return
+		return 0, fmt.Errorf("error running selection program: %w", err)
 	}
 
 	if model, ok := p.(selection.Model); ok {
-		if model.Aborted || model.Choice == "" {
-			errChan <- errors.New("user aborted selection")
-			return
+		if model.Aborted {
+			return 0, ErrUserAborted
 		}
-		choice <- policyNameIDsMap[model.Choice]
-		return
+		if model.Choice == "" {
+			return 0, errors.New("no replication policy selected")
+		}
+		return policyNameIDsMap[model.Choice], nil
 	}
 
-	errChan <- errors.New("unexpected program result")
+	return 0, errors.New("unexpected program result")
 }
