@@ -42,7 +42,7 @@ func ReplicationTasksList(tasks []*models.ReplicationTask, choice chan<- int64, 
 	}
 
 	if model, ok := p.(selection.Model); ok {
-		if model.Choice == "" {
+		if model.Aborted || model.Choice == "" {
 			errChan <- errors.New("user aborted selection")
 			return
 		}
