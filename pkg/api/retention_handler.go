@@ -121,13 +121,18 @@ func GetRetentionId(projectNameorID string, isName bool) (string, error) {
 	return retentionid, nil
 }
 
-func DeleteRetention(retentionID string, ruleIndex int) error {
+func DeleteRetention(projectName string, ruleIndex int) error {
 	ctx, client, err := utils.ContextWithClient()
 	if err != nil {
 		return err
 	}
 
-	retentionResp, err := ListRetention(retentionID)
+	retentionIDStr, err := GetRetentionId(projectName, true)
+	if err != nil {
+		return err
+	}
+
+	retentionResp, err := ListRetention(retentionIDStr)
 	if err != nil {
 		return err
 	}
